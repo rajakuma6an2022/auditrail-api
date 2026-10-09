@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Level {
+  INFO
+  WARN
+  ERROR
+}
+
+model User {
+  id         String      @id @default(cuid())
+  email      String      @unique
+  name       String
+  tenantId   String
+  createdAt  DateTime    @default(now()) @db.Timestamptz(3)
+  magicLinks MagicLink[]
+}
+
+model MagicLink {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(3)
+  usedAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AuditEvent {
+  id        String   @id
+  tenantId  String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  level     Level
+  service   String
+  actorId   String
+  action    String
+  message   String
+  metadata  Json
+
+  @@index([tenantId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([tenantId, level, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([tenantId, action, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([tenantId, service, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([tenantId, actorId, createdAt(sort: Desc), id(sort: Desc)])
+}
