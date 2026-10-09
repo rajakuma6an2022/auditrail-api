@@ -6,7 +6,12 @@ import { prisma } from "../lib/prisma.js";
 import { AppError } from "../lib/errors.js";
 import { generateToken, hashToken } from "../lib/tokens.js";
 import { sendMagicLinkEmail } from "../lib/mailer.js";
-import { SESSION_COOKIE, clearCookieOptions, sessionCookieOptions, signSession } from "../lib/sessions.js";
+import {
+  SESSION_COOKIE,
+  clearCookieOptions,
+  sessionCookieOptions,
+  signSession,
+} from "../lib/sessions.js";
 import { requireAuth } from "../middleware/auth.js";
 
 export const authRouter = Router();
@@ -19,7 +24,10 @@ const magicLinkLimiter = rateLimit({
   skip: () => env.NODE_ENV === "test",
   handler: (_req, res) => {
     res.status(429).json({
-      error: { code: "RATE_LIMITED", message: "Too many requests. Please try again in a few minutes." },
+      error: {
+        code: "RATE_LIMITED",
+        message: "Too many requests. Please try again in a few minutes.",
+      },
     });
   },
 });
@@ -32,7 +40,12 @@ const verifyBody = z.object({
   token: z.string().min(20).max(200),
 });
 
-const toPublicUser = (u: { id: string; email: string; name: string; tenantId: string }) => ({
+const toPublicUser = (u: {
+  id: string;
+  email: string;
+  name: string;
+  tenantId: string;
+}) => ({
   id: u.id,
   email: u.email,
   name: u.name,
@@ -55,19 +68,37 @@ authRouter.post("/magic-link", magicLinkLimiter, async (req, res) => {
       data: {
         userId: user.id,
         tokenHash: hashToken(token),
-        expiresAt: new Date(Date.now() + env.MAGIC_LINK_TTL_MINUTES * 60 * 1000),
+        expiresAt: new Date(
+          Date.now() + env.MAGIC_LINK_TTL_MINUTES * 60 * 1000,
+        ),
       },
     });
-    await sendMagicLinkEmail(user.email, `${env.APP_URL}/auth/verify?token=${token}`);
+    try {
+      await sendMagicLinkEmail(
+        user.email,
+        `${env.APP_URL}/auth/verify?token=${token}`,
+      );
+    } catch (err) {
+      // Never reveal (via a 5xx) that this email exists; log and answer the same 202.
+      console.error("[mailer] failed to send magic link:", err);
+    }
   }
 
-  res.status(202).json({ message: "If that email is registered, a sign-in link has been sent." });
+  res
+    .status(202)
+    .json({
+      message: "If that email is registered, a sign-in link has been sent.",
+    });
 });
 
 // POST (not GET) so email scanners that pre-fetch links cannot burn the one-time token.
 authRouter.post("/verify", async (req, res) => {
   const { token } = verifyBody.parse(req.body);
-  const invalid = new AppError(401, "INVALID_LINK", "This sign-in link is invalid or has expired.");
+  const invalid = new AppError(
+    401,
+    "INVALID_LINK",
+    "This sign-in link is invalid or has expired.",
+  );
 
   const link = await prisma.magicLink.findUnique({
     where: { tokenHash: hashToken(token) },
@@ -84,7 +115,11 @@ authRouter.post("/verify", async (req, res) => {
 
   res.cookie(
     SESSION_COOKIE,
-    signSession({ sub: link.user.id, tenantId: link.user.tenantId, email: link.user.email }),
+    signSession({
+      sub: link.user.id,
+      tenantId: link.user.tenantId,
+      email: link.user.email,
+    }),
     sessionCookieOptions,
   );
   res.json({ user: toPublicUser(link.user) });

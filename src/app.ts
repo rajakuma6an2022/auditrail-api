@@ -12,7 +12,7 @@ import { eventsRouter } from "./routes/events.js";
 export function createApp() {
   const app = express();
 
-  app.set("trust proxy", 1);
+ app.set("trust proxy", env.TRUST_PROXY_HOPS);
   app.disable("x-powered-by");
 
   app.use(helmet());

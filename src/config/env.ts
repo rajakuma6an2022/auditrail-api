@@ -13,6 +13,9 @@ const schema = z.object({
   APP_URL: z.string().default("http://localhost:3000"),
   MAGIC_LINK_TTL_MINUTES: z.coerce.number().int().positive().default(15),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
+  RESEND_API_KEY: z.string().optional(),
+  MAIL_FROM: z.string().default("Auditrail <onboarding@resend.dev>"),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(1),
 });
 
 const parsed = schema.safeParse(process.env);
