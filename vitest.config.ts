@@ -9,6 +9,8 @@ export default defineConfig({
       DATABASE_URL: "postgresql://user:pass@localhost:5432/test",
       JWT_SECRET: "test-secret-test-secret-test-secret-123456",
       CORS_ORIGIN: "http://localhost:3000",
+      APP_URL: "http://localhost:3000/login/",
+      RESEND_API_KEY: "",
     },
   },
 });

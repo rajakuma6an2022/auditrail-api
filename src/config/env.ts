@@ -10,7 +10,17 @@ const schema = z.object({
   DIRECT_URL: z.string().optional(),
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
-  APP_URL: z.string().default("http://localhost:3000"),
+    APP_URL: z
+    .string()
+    .default("http://localhost:3000")
+    .transform((value, ctx) => {
+      try {
+        return new URL(value).origin; // drops any path / trailing slash
+      } catch {
+        ctx.addIssue({ code: "custom", message: "APP_URL must be a valid URL" });
+        return z.NEVER;
+      }
+    }),
   MAGIC_LINK_TTL_MINUTES: z.coerce.number().int().positive().default(15),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
   RESEND_API_KEY: z.string().optional(),

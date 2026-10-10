@@ -8,7 +8,7 @@ afterEach(() => {
 
 async function loadMailer(key?: string) {
   vi.resetModules();
-  if (key) vi.stubEnv("RESEND_API_KEY", key);
+  vi.stubEnv("RESEND_API_KEY", key ?? "");
   return import("../src/lib/mailer.js");
 }
 

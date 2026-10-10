@@ -52,6 +52,14 @@ describe("POST /api/v1/auth/magic-link", () => {
     expect(sendMail).not.toHaveBeenCalled();
   });
 
+    it("builds the link from the APP_URL origin even if APP_URL has a path (regression)", async () => {
+    db.user.findUnique.mockResolvedValue(user);
+    await request(app).post("/api/v1/auth/magic-link").send({ email: "support@payflow.test" });
+    const url: string = sendMail.mock.calls[0]![1];
+    expect(url.startsWith("http://localhost:3000/auth/verify?token=")).toBe(true);
+    expect(url).not.toContain("/login/");
+  });
+
   it("stores only a hash and emails a link for a known email", async () => {
     db.user.findUnique.mockResolvedValue(user);
     const res = await request(app)
