@@ -27,7 +27,13 @@ describe("buildWhere", () => {
   it("applies exact filters and time range", () => {
     const where = buildWhere(
       "t1",
-      parse({ level: "ERROR", service: "payments", action: "payment_failed", from: "2026-10-01T00:00:00Z", to: "2026-10-02T00:00:00Z" }),
+      parse({
+        level: "ERROR",
+        service: "payments",
+        action: "payment_failed",
+        from: "2026-10-01T00:00:00Z",
+        to: "2026-10-02T00:00:00Z",
+      }),
     );
     expect(where).toMatchObject({ tenantId: "t1", level: "ERROR", service: "payments", action: "payment_failed" });
     expect(where.createdAt).toEqual({ gte: new Date("2026-10-01T00:00:00Z"), lte: new Date("2026-10-02T00:00:00Z") });

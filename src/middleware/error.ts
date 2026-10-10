@@ -10,6 +10,7 @@ export const notFound: RequestHandler = (req, res) => {
 };
 
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+  const requestId = res.locals.requestId as string | undefined;
   if (err instanceof ZodError) {
     res.status(400).json({
       error: {
@@ -26,10 +27,11 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     return;
   }
 
-  console.error(err);
+  console.error(JSON.stringify({ level: "error", msg: "unhandled", requestId, error: String(err?.stack ?? err) }));
   res.status(500).json({
     error: {
       code: "INTERNAL_ERROR",
+      requestId,
       message: env.isProd ? "Something went wrong" : String(err?.message ?? err),
     },
   });

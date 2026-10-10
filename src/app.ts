@@ -7,13 +7,16 @@ import { env } from "./config/env.js";
 import { healthRouter } from "./routes/health.js";
 import { authRouter } from "./routes/auth.js";
 import { errorHandler, notFound } from "./middleware/error.js";
-import { eventsRouter } from "./routes/events.js"; 
+import { eventsRouter } from "./routes/events.js";
+import { createRequestLogger, requestId } from "./middleware/request-log.js";
 
 export function createApp() {
   const app = express();
 
- app.set("trust proxy", env.TRUST_PROXY_HOPS);
+  app.set("trust proxy", env.TRUST_PROXY_HOPS);
   app.disable("x-powered-by");
+  app.use(requestId);
+  if (env.NODE_ENV !== "test") app.use(createRequestLogger((line) => console.log(line)));
 
   app.use(helmet());
   app.use(cors({ origin: env.corsOrigins, credentials: true }));
@@ -30,7 +33,7 @@ export function createApp() {
 
   app.use(healthRouter);
   app.use("/api/v1/auth", authRouter);
-  app.use("/api/v1/events", eventsRouter); 
+  app.use("/api/v1/events", eventsRouter);
 
   app.use(notFound);
   app.use(errorHandler);

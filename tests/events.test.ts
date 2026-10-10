@@ -46,9 +46,7 @@ describe("auth guard", () => {
 describe("GET /api/v1/events", () => {
   it("scopes the query to the session tenant and ignores a tenantId in the query string", async () => {
     db.auditEvent.findMany.mockResolvedValue([]);
-    const res = await request(app)
-      .get("/api/v1/events?tenantId=tenant_acme")
-      .set("Cookie", cookie("tenant_payflow"));
+    const res = await request(app).get("/api/v1/events?tenantId=tenant_acme").set("Cookie", cookie("tenant_payflow"));
     expect(res.status).toBe(200);
     const args = db.auditEvent.findMany.mock.calls[0]![0];
     expect(args.where.tenantId).toBe("tenant_payflow");

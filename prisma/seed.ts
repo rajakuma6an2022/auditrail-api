@@ -24,7 +24,7 @@ function mulberry32(seed: number) {
   };
 }
 const rand = mulberry32(42);
-const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rand() * arr.length)] as T;
+const pick = <T>(arr: readonly T[]): T => arr[Math.floor(rand() * arr.length)] as T;
 const int = (min: number, max: number) => Math.floor(rand() * (max - min + 1)) + min;
 const eventId = () => `evt_${randomBytes(6).toString("hex")}`;
 
@@ -44,54 +44,115 @@ const endpoints = ["/v1/charges", "/v1/refunds", "/v1/orders", "/v1/invoices"] a
 
 const templates: Template[] = [
   {
-    action: "payment_completed", level: Level.INFO, service: "payments", weight: 22,
+    action: "payment_completed",
+    level: Level.INFO,
+    service: "payments",
+    weight: 22,
     message: () => "Payment completed successfully.",
-    metadata: () => ({ paymentId: `pay_${int(10000, 99999)}`, amount: int(100, 99900), currency: pick(currencies), provider: pick(providers) }),
+    metadata: () => ({
+      paymentId: `pay_${int(10000, 99999)}`,
+      amount: int(100, 99900),
+      currency: pick(currencies),
+      provider: pick(providers),
+    }),
   },
   {
-    action: "payment_failed", level: Level.ERROR, service: "payments", weight: 6,
+    action: "payment_failed",
+    level: Level.ERROR,
+    service: "payments",
+    weight: 6,
     message: () => "Payment failed for customer during card authorization.",
-    metadata: () => ({ paymentId: `pay_${int(10000, 99999)}`, amount: int(100, 99900), currency: pick(currencies), provider: pick(providers), reason: pick(declineReasons) }),
+    metadata: () => ({
+      paymentId: `pay_${int(10000, 99999)}`,
+      amount: int(100, 99900),
+      currency: pick(currencies),
+      provider: pick(providers),
+      reason: pick(declineReasons),
+    }),
   },
   {
-    action: "user_login", level: Level.INFO, service: "auth", weight: 20,
+    action: "user_login",
+    level: Level.INFO,
+    service: "auth",
+    weight: 20,
     message: () => "User signed in.",
     metadata: () => ({ method: pick(["magic_link", "sso"] as const), ip: `10.0.${int(0, 255)}.${int(1, 254)}` }),
   },
   {
-    action: "user_logout", level: Level.INFO, service: "auth", weight: 12,
+    action: "user_logout",
+    level: Level.INFO,
+    service: "auth",
+    weight: 12,
     message: () => "User signed out.",
     metadata: () => ({ sessionId: `ses_${int(100000, 999999)}` }),
   },
   {
-    action: "order_created", level: Level.INFO, service: "orders", weight: 14,
+    action: "order_created",
+    level: Level.INFO,
+    service: "orders",
+    weight: 14,
     message: () => "Order created.",
-    metadata: () => ({ orderId: `ord_${int(10000, 99999)}`, items: int(1, 8), total: int(500, 250000), currency: pick(currencies) }),
+    metadata: () => ({
+      orderId: `ord_${int(10000, 99999)}`,
+      items: int(1, 8),
+      total: int(500, 250000),
+      currency: pick(currencies),
+    }),
   },
   {
-    action: "order_cancelled", level: Level.WARN, service: "orders", weight: 4,
+    action: "order_cancelled",
+    level: Level.WARN,
+    service: "orders",
+    weight: 4,
     message: () => "Order cancelled by customer.",
-    metadata: () => ({ orderId: `ord_${int(10000, 99999)}`, reason: pick(["customer_request", "payment_timeout", "out_of_stock"] as const) }),
+    metadata: () => ({
+      orderId: `ord_${int(10000, 99999)}`,
+      reason: pick(["customer_request", "payment_timeout", "out_of_stock"] as const),
+    }),
   },
   {
-    action: "password_changed", level: Level.INFO, service: "auth", weight: 2,
+    action: "password_changed",
+    level: Level.INFO,
+    service: "auth",
+    weight: 2,
     message: () => "Password changed.",
     metadata: () => ({ initiatedBy: pick(["user", "admin"] as const) }),
   },
   {
-    action: "invoice_created", level: Level.INFO, service: "billing", weight: 8,
+    action: "invoice_created",
+    level: Level.INFO,
+    service: "billing",
+    weight: 8,
     message: () => "Invoice created.",
-    metadata: () => ({ invoiceId: `inv_${int(10000, 99999)}`, amount: int(1000, 500000), currency: pick(currencies), dueInDays: pick([7, 14, 30] as const) }),
+    metadata: () => ({
+      invoiceId: `inv_${int(10000, 99999)}`,
+      amount: int(1000, 500000),
+      currency: pick(currencies),
+      dueInDays: pick([7, 14, 30] as const),
+    }),
   },
   {
-    action: "api_error", level: Level.ERROR, service: "gateway", weight: 5,
+    action: "api_error",
+    level: Level.ERROR,
+    service: "gateway",
+    weight: 5,
     message: () => "Upstream request failed with a server error.",
-    metadata: () => ({ endpoint: pick(endpoints), statusCode: pick([500, 502, 503, 504] as const), latencyMs: int(200, 9000) }),
+    metadata: () => ({
+      endpoint: pick(endpoints),
+      statusCode: pick([500, 502, 503, 504] as const),
+      latencyMs: int(200, 9000),
+    }),
   },
   {
-    action: "permission_denied", level: Level.WARN, service: "gateway", weight: 7,
+    action: "permission_denied",
+    level: Level.WARN,
+    service: "gateway",
+    weight: 7,
     message: () => "Request blocked: missing required permission.",
-    metadata: () => ({ endpoint: pick(endpoints), requiredScope: pick(["payments:write", "orders:read", "invoices:write"] as const) }),
+    metadata: () => ({
+      endpoint: pick(endpoints),
+      requiredScope: pick(["payments:write", "orders:read", "invoices:write"] as const),
+    }),
   },
 ];
 
