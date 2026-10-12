@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { defineConfig } from "vitest/config";
 
 const url = process.env.TEST_DATABASE_URL ?? "";
