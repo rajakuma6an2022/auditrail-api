@@ -31,6 +31,7 @@ export function createApp() {
     }),
   );
 
+  // health check
   app.use(healthRouter);
   app.use("/api/v1/auth", authRouter);
   app.use("/api/v1/events", eventsRouter);
