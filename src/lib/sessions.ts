@@ -8,8 +8,8 @@ export type SessionPayload = { sub: string; tenantId: string; email: string };
 
 const maxAgeSeconds = env.SESSION_TTL_DAYS * 24 * 60 * 60;
 
-export function signSession(payload: SessionPayload): string {
-  return jwt.sign(payload, env.JWT_SECRET, { algorithm: "HS256", expiresIn: maxAgeSeconds });
+export function signSession(payload: SessionPayload, ttlSeconds: number = maxAgeSeconds): string {
+  return jwt.sign(payload, env.JWT_SECRET, { algorithm: "HS256", expiresIn: ttlSeconds });
 }
 
 export function verifySession(token: string): SessionPayload | null {
@@ -33,3 +33,6 @@ const base: CookieOptions = {
 
 export const sessionCookieOptions: CookieOptions = { ...base, maxAge: maxAgeSeconds * 1000 };
 export const clearCookieOptions: CookieOptions = base;
+
+// Same cookie with a custom lifetime (used by the short-lived demo session).
+export const sessionCookieFor = (ttlSeconds: number): CookieOptions => ({ ...base, maxAge: ttlSeconds * 1000 });

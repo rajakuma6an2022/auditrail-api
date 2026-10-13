@@ -11,6 +11,16 @@ Express + Prisma + PostgreSQL (Neon) backend for **Auditrail**, a focused event-
 - Filters: level, service, action, time range (presets and custom), search over event id / actor / message
 - Enumeration-safe login (always `202`), rate limiting, helmet, Zod validation, request IDs and structured logs (query strings are never logged, so tokens cannot leak)
 
+## Demo access
+
+Set `DEMO_LOGIN_EMAIL` to a seeded user's email to enable `POST /api/v1/auth/demo` and the web app's **Try the demo** button.
+The endpoint signs in as that one configured user only (the client cannot choose who), is rate limited, issues a short-lived
+session (`DEMO_SESSION_HOURS`, default 6) and is off when the variable is unset. Use a user whose tenant holds synthetic data only:
+
+```bash
+npm run user:add -- demo@payflow.test "Demo User" tenant_payflow
+```
+
 ## Architecture
 
 Browser → Next.js on Vercel (proxies `/api/*`) → Express on Render → PostgreSQL on Neon.
@@ -18,7 +28,7 @@ The browser only talks to the Next.js origin, so the session cookie stays first-
 
 ## Tests
 
-- `npm test`: 54 unit tests (Vitest + Supertest, Prisma mocked)
+- `npm test`: 61 unit tests (Vitest + Supertest, Prisma mocked)
 - `npm run test:integration`: 12 tests against a real PostgreSQL: keyset correctness across rows with identical timestamps, tenant isolation, and the magic-link flow including two simultaneous verifies of one token (exactly one succeeds). Refuses to run unless the database is local and named `*_test`.
 - GitHub Actions runs format check, typecheck, unit tests, migrations, integration tests and build against a Postgres service container.
 

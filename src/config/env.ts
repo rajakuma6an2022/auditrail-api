@@ -21,6 +21,9 @@ const schema = z.object({
     }),
   MAGIC_LINK_TTL_MINUTES: z.coerce.number().int().positive().default(15),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
+  // Optional public "Try the demo" sign-in: the email of a seeded, synthetic-data user. Unset = feature off.
+  DEMO_LOGIN_EMAIL: z.preprocess((v) => (v === "" ? undefined : v), z.string().email().optional()),
+  DEMO_SESSION_HOURS: z.coerce.number().int().positive().default(6),
   RESEND_API_KEY: z.string().optional(),
   MAIL_FROM: z.string().default("Auditrail <onboarding@resend.dev>"),
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(1),
