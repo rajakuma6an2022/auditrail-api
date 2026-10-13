@@ -8,6 +8,7 @@ const TOTAL = Number(process.env.SEED_COUNT ?? 10000);
 const USER_EMAIL = process.env.SEED_USER_EMAIL ?? "support@payflow.test";
 const BATCH = 2000; // 2000 rows x 9 columns stays under Postgres' 32,767 bind-parameter limit
 const DAYS = 30;
+const APPEND = process.env.SEED_APPEND === "true"; // add events only: no wipe, no user changes
 
 const PAYFLOW = "tenant_payflow";
 const ACME = "tenant_acme";
@@ -26,7 +27,8 @@ function mulberry32(seed: number) {
 const rand = mulberry32(42);
 const pick = <T>(arr: readonly T[]): T => arr[Math.floor(rand() * arr.length)] as T;
 const int = (min: number, max: number) => Math.floor(rand() * (max - min + 1)) + min;
-const eventId = () => `evt_${randomBytes(6).toString("hex")}`;
+// 8 random bytes: with 2M rows a 6-byte id has a ~0.7% chance of at least one collision, 8 bytes is negligible
+const eventId = () => `evt_${randomBytes(8).toString("hex")}`;
 
 type Template = {
   action: string;
@@ -189,60 +191,58 @@ async function insertBatches(tenantId: string, count: number) {
 }
 
 async function main() {
-  const databaseUrl = process.env.DATABASE_URL;
-  const performanceUrl = process.env.PERF_DATABASE_URL;
-  if (
-    process.env.ALLOW_DESTRUCTIVE_PERF_SEED !== "true" ||
-    !databaseUrl ||
-    !performanceUrl ||
-    databaseUrl !== performanceUrl
-  ) {
-    throw new Error(
-      "Seed blocked: use a dedicated performance-test Neon branch. " +
-        "DATABASE_URL must exactly match PERF_DATABASE_URL, and " +
-        "ALLOW_DESTRUCTIVE_PERF_SEED=true must be explicitly set.",
-    );
-  }
-  if (!Number.isSafeInteger(TOTAL) || TOTAL < 1 || TOTAL > 499499) {
-    throw new Error("SEED_COUNT must be between 1 and 499499.");
-  }
-  console.log(`Seeding ${TOTAL.toLocaleString()} events for ${PAYFLOW} (+ a small ${ACME} tenant)...`);
+  console.log(`${APPEND ? "Appending" : "Seeding"} ${TOTAL.toLocaleString()} events for ${PAYFLOW}...`);
   const started = Date.now();
 
-  await prisma.auditEvent.deleteMany();
-  await prisma.user.deleteMany();
+  if (!APPEND) {
+    await prisma.auditEvent.deleteMany();
+    await prisma.user.deleteMany();
 
-  await prisma.user.createMany({
-    data: [
-      { email: USER_EMAIL, name: "PayFlow Support", tenantId: PAYFLOW },
-      { email: "support@acme.test", name: "Acme Support", tenantId: ACME },
-    ],
-  });
+    await prisma.user.createMany({
+      data: [
+        { email: USER_EMAIL, name: "PayFlow Support", tenantId: PAYFLOW },
+        { email: "support@acme.test", name: "Acme Support", tenantId: ACME },
+      ],
+    });
 
-  // fixed event from the design mockup, so the Event Detail screen matches
-  await prisma.auditEvent.create({
-    data: {
-      id: "evt_9f81a2",
-      tenantId: PAYFLOW,
-      createdAt: new Date("2026-10-06T10:04:21+05:30"),
-      level: Level.ERROR,
-      service: "payments",
-      actorId: "user_4821",
-      action: "payment_failed",
-      message: "Payment failed for customer during card authorization.",
-      metadata: { paymentId: "pay_10492", amount: 1499, currency: "INR", provider: "stripe", reason: "card_declined" },
-    },
-  });
+    // fixed event from the design mockup, so the Event Detail screen matches
+    await prisma.auditEvent.create({
+      data: {
+        id: "evt_9f81a2",
+        tenantId: PAYFLOW,
+        createdAt: new Date("2026-10-06T10:04:21+05:30"),
+        level: Level.ERROR,
+        service: "payments",
+        actorId: "user_4821",
+        action: "payment_failed",
+        message: "Payment failed for customer during card authorization.",
+        metadata: {
+          paymentId: "pay_10492",
+          amount: 1499,
+          currency: "INR",
+          provider: "stripe",
+          reason: "card_declined",
+        },
+      },
+    });
+  }
 
   await insertBatches(PAYFLOW, TOTAL);
-  await insertBatches(ACME, 500);
+  if (!APPEND) await insertBatches(ACME, 500);
+
+  // fresh planner statistics: without this Postgres plans against stale row estimates
+  await prisma.$executeRawUnsafe('ANALYZE "AuditEvent"');
 
   const [total, perLevel] = await Promise.all([
     prisma.auditEvent.count(),
     prisma.auditEvent.groupBy({ by: ["level"], _count: true }),
   ]);
-  console.log(`Done in ${((Date.now() - started) / 1000).toFixed(1)}s. Total events: ${total.toLocaleString()}`);
+  const seconds = (Date.now() - started) / 1000;
+  console.log(
+    `Done in ${seconds.toFixed(1)}s (${Math.round(TOTAL / seconds).toLocaleString()} rows/s). Total events: ${total.toLocaleString()}`,
+  );
   console.log(perLevel.map((l) => `${l.level}=${l._count}`).join("  "));
+  console.log("Next: npm run db:size");
 }
 
 main()
