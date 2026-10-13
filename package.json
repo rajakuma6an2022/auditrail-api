@@ -21,6 +21,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:size": "tsx prisma/db-size.ts",
     "user:add": "tsx prisma/add-user.ts",
     "e2e:seed": "tsx prisma/e2e-seed.ts",
     "db:studio": "prisma studio",
