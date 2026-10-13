@@ -2,28 +2,75 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../lib/errors.js";
 import { requireAuth } from "../middleware/auth.js";
-import { LEVELS, buildWhere, encodeCursor, listQuerySchema } from "../lib/events-query.js";
+import { LEVELS, buildWhere, decodeCursor, encodeCursor, listQuerySchema } from "../lib/events-query.js";
 
 export const eventsRouter = Router();
 
 eventsRouter.use(requireAuth);
 
+// eventsRouter.get("/", async (req, res) => {
+//   const query = listQuerySchema.parse(req.query);
+//   const where = buildWhere(req.auth!.tenantId, query);
+
+//   // fetch one extra row to know whether another page exists (no expensive COUNT)
+//   const rows = await prisma.auditEvent.findMany({
+//     where,
+//     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+//     take: query.limit + 1,
+//   });
+
+//   const hasMore = rows.length > query.limit;
+//   const data = hasMore ? rows.slice(0, query.limit) : rows;
+//   const last = data[data.length - 1];
+
+//   res.json({ data, nextCursor: hasMore && last ? encodeCursor(last) : null });
+// });
+
 eventsRouter.get("/", async (req, res) => {
   const query = listQuerySchema.parse(req.query);
-  const where = buildWhere(req.auth!.tenantId, query);
+  const tenantId = req.auth!.tenantId;
 
-  // fetch one extra row to know whether another page exists (no expensive COUNT)
-  const rows = await prisma.auditEvent.findMany({
-    where,
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: query.limit + 1,
-  });
+  // Use tuple keyset pagination for unfiltered cursor requests.
+  const hasFilters = Boolean(query.level || query.service || query.action || query.q || query.from || query.to);
+
+  const rows =
+    query.cursor && !hasFilters
+      ? await (async () => {
+          const cursor = decodeCursor(query.cursor!);
+
+          return prisma.$queryRaw<Awaited<ReturnType<typeof prisma.auditEvent.findMany>>>`
+            SELECT
+              "id",
+              "tenantId",
+              "createdAt",
+              "level",
+              "service",
+              "actorId",
+              "action",
+              "message",
+              "metadata"
+            FROM "AuditEvent"
+            WHERE "tenantId" = ${tenantId}
+              AND ("createdAt", "id") <
+                  (${cursor.createdAt}, ${cursor.id})
+            ORDER BY "createdAt" DESC, "id" DESC
+            LIMIT ${query.limit + 1}
+          `;
+        })()
+      : await prisma.auditEvent.findMany({
+          where: buildWhere(tenantId, query),
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          take: query.limit + 1,
+        });
 
   const hasMore = rows.length > query.limit;
   const data = hasMore ? rows.slice(0, query.limit) : rows;
   const last = data[data.length - 1];
 
-  res.json({ data, nextCursor: hasMore && last ? encodeCursor(last) : null });
+  res.json({
+    data,
+    nextCursor: hasMore && last ? encodeCursor(last) : null,
+  });
 });
 
 // Filter dropdown options. Distinct scans are cached per tenant for 60s.

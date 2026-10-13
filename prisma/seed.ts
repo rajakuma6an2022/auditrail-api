@@ -189,6 +189,23 @@ async function insertBatches(tenantId: string, count: number) {
 }
 
 async function main() {
+  const databaseUrl = process.env.DATABASE_URL;
+  const performanceUrl = process.env.PERF_DATABASE_URL;
+  if (
+    process.env.ALLOW_DESTRUCTIVE_PERF_SEED !== "true" ||
+    !databaseUrl ||
+    !performanceUrl ||
+    databaseUrl !== performanceUrl
+  ) {
+    throw new Error(
+      "Seed blocked: use a dedicated performance-test Neon branch. " +
+        "DATABASE_URL must exactly match PERF_DATABASE_URL, and " +
+        "ALLOW_DESTRUCTIVE_PERF_SEED=true must be explicitly set.",
+    );
+  }
+  if (!Number.isSafeInteger(TOTAL) || TOTAL < 1 || TOTAL > 499499) {
+    throw new Error("SEED_COUNT must be between 1 and 499499.");
+  }
   console.log(`Seeding ${TOTAL.toLocaleString()} events for ${PAYFLOW} (+ a small ${ACME} tenant)...`);
   const started = Date.now();
 

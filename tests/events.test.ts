@@ -69,12 +69,42 @@ describe("GET /api/v1/events", () => {
     expect(res.body.nextCursor).toBeNull();
   });
 
+  // it("uses the cursor for the next page", async () => {
+  //   db.auditEvent.findMany.mockResolvedValueOnce(makeRows(11)).mockResolvedValueOnce([]);
+  //   const first = await request(app).get("/api/v1/events?limit=10").set("Cookie", cookie());
+  //   // await request(app).get(`/api/v1/events?limit=10&cursor=${first.body.nextCursor}`).set("Cookie", cookie());
+  //   await request(app).get(`/api/v1/events?limit=10&cursor=${first.body.nextCursor}`).set("Cookie", cookie());
+  //   const where = db.auditEvent.findMany.mock.calls[1]![0].where;
+  //   expect(JSON.stringify(where.AND)).toContain("evt_0009");
+  // });
+
   it("uses the cursor for the next page", async () => {
-    db.auditEvent.findMany.mockResolvedValueOnce(makeRows(11)).mockResolvedValueOnce([]);
+    const rows = Array.from({ length: 11 }, (_, i) => ({
+      id: `evt_${String(i).padStart(4, "0")}`,
+      tenantId: "tenant_1",
+      createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, i)),
+      level: "INFO" as const,
+      service: "api",
+      actorId: "user_1",
+      action: "read",
+      message: "test event",
+      metadata: {},
+    }));
+
+    db.auditEvent.findMany.mockResolvedValueOnce(rows);
+    db.$queryRaw.mockResolvedValueOnce([]);
+
     const first = await request(app).get("/api/v1/events?limit=10").set("Cookie", cookie());
-    await request(app).get(`/api/v1/events?limit=10&cursor=${first.body.nextCursor}`).set("Cookie", cookie());
-    const where = db.auditEvent.findMany.mock.calls[1]![0].where;
-    expect(JSON.stringify(where.AND)).toContain("evt_0009");
+
+    expect(first.status).toBe(200);
+    expect(first.body.nextCursor).toBeTruthy();
+
+    const second = await request(app)
+      .get(`/api/v1/events?limit=10&cursor=${first.body.nextCursor}`)
+      .set("Cookie", cookie());
+
+    expect(second.status).toBe(200);
+    expect(db.$queryRaw).toHaveBeenCalledTimes(1);
   });
 
   it("passes filters through", async () => {
