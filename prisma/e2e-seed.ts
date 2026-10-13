@@ -29,6 +29,7 @@ async function main() {
   const e2eUser = await prisma.user.create({
     data: { email: "e2e@payflow.test", name: "E2E User", tenantId: PAYFLOW },
   });
+  await prisma.user.create({ data: { email: "demo@payflow.test", name: "Demo User", tenantId: PAYFLOW } });
   await prisma.user.create({ data: { email: "other@acme.test", name: "Acme User", tenantId: ACME } });
 
   const now = Date.now();
@@ -93,7 +94,7 @@ async function main() {
     ],
   });
 
-  console.log("E2E seed complete: 122 events, 2 users, 14 magic-link tokens.");
+  console.log("E2E seed complete: 122 events, 3 users, 14 magic-link tokens.");
 }
 
 main()
