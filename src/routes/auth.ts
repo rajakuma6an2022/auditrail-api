@@ -110,41 +110,6 @@ authRouter.post("/verify", async (req, res) => {
   res.json({ user: toPublicUser(link.user) });
 });
 
-const demoLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 30,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  skip: () => env.NODE_ENV === "test",
-  handler: (_req, res) => {
-    res.status(429).json({ error: { code: "RATE_LIMITED", message: "Too many requests. Please try again later." } });
-  },
-});
-
-// Lets the login screen know whether to offer "Try the demo".
-authRouter.get("/config", (_req, res) => {
-  res.json({ demoEnabled: Boolean(env.DEMO_LOGIN_EMAIL) });
-});
-
-// Public read-only demo: signs in as ONE server-configured, synthetic-data user (the client cannot choose who).
-// Off unless DEMO_LOGIN_EMAIL is set; the session is short-lived.
-authRouter.post("/demo", demoLimiter, async (_req, res) => {
-  const notEnabled = new AppError(404, "DEMO_DISABLED", "Demo login is not enabled.");
-  const email = env.DEMO_LOGIN_EMAIL?.toLowerCase();
-  if (!email) throw notEnabled;
-
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) throw notEnabled;
-
-  const ttl = env.DEMO_SESSION_HOURS * 60 * 60;
-  res.cookie(
-    SESSION_COOKIE,
-    signSession({ sub: user.id, tenantId: user.tenantId, email: user.email }, ttl),
-    sessionCookieFor(ttl),
-  );
-  res.json({ user: toPublicUser(user) });
-});
-
 authRouter.get("/me", requireAuth, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.auth!.sub } });
   if (!user) {

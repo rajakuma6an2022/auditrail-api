@@ -8,24 +8,6 @@ export const eventsRouter = Router();
 
 eventsRouter.use(requireAuth);
 
-// eventsRouter.get("/", async (req, res) => {
-//   const query = listQuerySchema.parse(req.query);
-//   const where = buildWhere(req.auth!.tenantId, query);
-
-//   // fetch one extra row to know whether another page exists (no expensive COUNT)
-//   const rows = await prisma.auditEvent.findMany({
-//     where,
-//     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-//     take: query.limit + 1,
-//   });
-
-//   const hasMore = rows.length > query.limit;
-//   const data = hasMore ? rows.slice(0, query.limit) : rows;
-//   const last = data[data.length - 1];
-
-//   res.json({ data, nextCursor: hasMore && last ? encodeCursor(last) : null });
-// });
-
 eventsRouter.get("/", async (req, res) => {
   const query = listQuerySchema.parse(req.query);
   const tenantId = req.auth!.tenantId;
