@@ -78,6 +78,5 @@ Docker is not required: `docker-compose.yml` only provides a throwaway Postgres 
 ## Known trade-offs
 
 - Logout clears the cookie but does not revoke the stateless 7-day JWT
-- Search uses `ILIKE`: fine at this scale, but `pg_trgm` indexes (at a storage cost) would be the next step for much larger tables
 - Hosted on free tiers: the first request after idle can take about a minute (Render cold start)
 - Resend only delivers to verified recipients without a custom domain, so sign-in is limited to allow-listed addresses
