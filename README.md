@@ -70,7 +70,6 @@ npm run db:seed                 # SEED_COUNT events (default 10,000)
 npm run dev
 ```
 
-
 `SEED_APPEND=true SEED_COUNT=90000 npm run db:seed` (grow the dataset without wiping),
 `npm run db:size` (table and index size, bytes per row, projection against the storage limit).
 
