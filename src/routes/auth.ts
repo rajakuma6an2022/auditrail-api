@@ -80,7 +80,6 @@ authRouter.post("/magic-link", magicLinkLimiter, async (req, res) => {
   });
 });
 
-// POST (not GET) so email scanners that pre-fetch links cannot burn the one-time token.
 authRouter.post("/verify", async (req, res) => {
   const { token } = verifyBody.parse(req.body);
   const invalid = new AppError(401, "INVALID_LINK", "This sign-in link is invalid or has expired.");
